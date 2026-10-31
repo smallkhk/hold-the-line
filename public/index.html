@@ -62,6 +62,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 .btn{border:0;border-radius:6px;padding:10px 14px;font-weight:700;background:#ffffff1a;color:var(--console-ink)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn.send{background:var(--chrome);color:#fff}
+.callbar{padding:12px 14px;display:grid;gap:10px;border-bottom:1px solid #ffffff10}
+.status{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:13px}
+.status .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.status .dot.listen{background:var(--ok);box-shadow:0 0 0 0 #3fbf6a88;animation:ping 1.4s infinite}
+.status .dot.speak{background:#6fb6ff}.status .dot.think{background:var(--warn)}.status .dot.muted{background:var(--bad)}
+@keyframes ping{70%{box-shadow:0 0 0 8px #3fbf6a00}}
+.status .timer{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.level{height:5px;background:#ffffff12;border-radius:3px;overflow:hidden}
+.level i{display:block;height:100%;width:0;background:var(--ok);transition:width .08s}
+.callbar .controls{padding:0}
+.btn.mute,.btn.hang{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;padding:12px}
+.btn.mute[aria-pressed="true"]{background:var(--bad);color:#fff}
+.sub-h{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:10px 14px 0}
+.log{height:220px}
 .btn.mic{background:#ffffff1a;color:var(--console-ink);display:grid;place-items:center;padding:10px 12px}
 .btn.mic.rec{background:var(--bad);color:#fff;animation:pulse 1s infinite}
 .btn.mic.wait{opacity:.6}
@@ -143,16 +157,16 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
         <svg class="face" id="face" viewBox="0 0 120 120" aria-hidden="true"></svg>
         <div class="wave" id="wave"></div>
       </div>
+      <div class="callbar">
+        <div class="status"><span class="dot" id="statusDot"></span><span id="status">Phone idle</span><span class="timer" id="timer">00:00</span></div>
+        <div class="level" aria-hidden="true"><i id="micLevel"></i></div>
+        <div class="controls">
+          <button class="btn mute" id="muteBtn" disabled aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg><span id="muteLbl">Mute</span></button>
+          <button class="btn hang" id="hangBtn" disabled><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="transform:rotate(135deg)"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>Hang up</button>
+        </div>
+      </div>
+      <div class="sub-h">Live transcript</div>
       <div class="log" id="log" aria-live="polite"></div>
-      <div class="compose">
-        <input id="say" autocomplete="off" placeholder="Type what you say…" disabled>
-        <button class="btn mic" id="micBtn" disabled aria-label="Talk" title="Tap to talk, tap again to send"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></button>
-        <button class="btn send" id="sendBtn" disabled>Say</button>
-      </div>
-      <div class="controls">
-        <button class="btn hang" id="hangBtn" disabled>Hang up</button>
-      </div>
-      <div class="hint" id="hint">Callers think they reached their bank's support line. Win their trust, get them to read out their login details, then punch them into Account Link.</div>
       <div class="ring" id="ring" hidden>
         <div class="card">
           <svg class="face" id="ringFace" viewBox="0 0 120 120" width="84" height="84" aria-hidden="true"></svg>
@@ -195,7 +209,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
   <span class="sp"></span>
   <span class="stat calls">CALLS <b id="callsStat">0</b></span>
   <span class="stat">TEAM <b id="teamStat">$0</b></span>
-  <button class="tts" id="ttsBtn" aria-pressed="true">VOICE ON</button>
 </div>
 
 <div class="modal" id="intro">
@@ -213,7 +226,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
       </ul>
       <p>Talk them into reading each one out, type it into Account Link, hit Verify. Push too hard or slip up and trust drops. At zero they hang up. Six calls per shift.</p>
       <button class="go" id="startBtn">Clock in</button>
-      <div class="ai-note" id="aiNote">Callers are improvised live by AI and speak out loud. Tap the mic to talk back.</div>
+      <div class="ai-note" id="aiNote">Allow the microphone when asked, then just talk like a real call. Headphones stop the caller hearing themselves.</div>
     </div>
   </div>
 </div>
@@ -256,7 +269,7 @@ const mkCreds = () => ({
 const norm = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const money = n => "$" + n.toLocaleString("en-US");
 
-let state = { earned: 0, done: 0, onShift: false, results: [], queue: [], call: null, tts: true };
+let state = { earned: 0, done: 0, onShift: false, results: [], queue: [], call: null };
 let busy = false, aiOK = true;
 
 /* ---------- face ---------- */
@@ -320,29 +333,64 @@ function beep(freqs = [440, 480], dur = .35) {
 let ringTimer = null;
 function startRing() { stopRing(); beep(); ringTimer = setInterval(() => beep(), 1200); }
 function stopRing() { clearInterval(ringTimer); ringTimer = null; }
-const FEMALE = /female|woman|zira|samantha|victoria|karen|moira|tessa|fiona|susan|hazel|serena|allison|ava|jenny|aria|libby|sonia|natasha|google uk english female|google us english/i;
-const MALE = /male|man|david|mark|daniel|alex|fred|george|ryan|guy|thomas|oliver|arthur|google uk english male/i;
-function pickVoice(name) {
-  try {
-    const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
-    if (!vs.length) return null;
-    const fem = ["Marisol", "Agnes", "Bea", "Tammy"].some(n => name.startsWith(n));
-    const pool = vs.filter(v => fem ? FEMALE.test(v.name) && !/\bmale\b/i.test(v.name) : MALE.test(v.name) && !/female/i.test(v.name));
-    const list = pool.length ? pool : vs;
-    let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return list[h % list.length];
-  } catch { return null; }
+/* natural voice from server (Groq Orpheus), browser voice as fallback */
+let ttsOK = true, curAudio = null, speakToken = 0;
+function chunks(text, max = 190) {
+  const parts = text.match(/[^.!?]+[.!?]*\s*/g) || [text], out = [];
+  let cur = "";
+  for (const p of parts) {
+    if ((cur + p).length > max && cur) { out.push(cur.trim()); cur = ""; }
+    if (p.length > max) { for (let i = 0; i < p.length; i += max) out.push(p.slice(i, i + max)); continue; }
+    cur += p;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
 }
-try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch {}
-function speak(text, pitch = 1, name = "") {
-  if (!state.tts) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.pitch = pitch; u.rate = 1.02;
-    const v = pickVoice(name); if (v) { u.voice = v; u.lang = v.lang; }
-    speechSynthesis.speak(u);
-  } catch {}
+function playBlob(blob, token) {
+  return new Promise(res => {
+    if (token !== speakToken) return res();
+    const url = URL.createObjectURL(blob), a = new Audio(url);
+    curAudio = a;
+    const done = () => { URL.revokeObjectURL(url); if (curAudio === a) curAudio = null; res(); };
+    a.onended = done; a.onerror = done;
+    a.play().catch(done);
+  });
 }
+function browserSpeak(text, p, token) {
+  return new Promise(res => {
+    try {
+      if (token !== speakToken) return res();
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text); u.pitch = p.pitch; u.rate = 1;
+      const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+      if (vs.length) u.voice = vs[[...p.name].reduce((h, c) => h + c.charCodeAt(0), 0) % vs.length];
+      const safety = setTimeout(res, 1500 + text.length * 90);
+      u.onend = u.onerror = () => { clearTimeout(safety); res(); };
+      speechSynthesis.speak(u);
+    } catch { res(); }
+  });
+}
+async function speakAs(p, text, mood) {
+  const token = ++speakToken;
+  const tag = { angry: "[angry] ", happy: "[cheerful] " }[mood] || "";
+  if (ttsOK) {
+    const parts = chunks(text);
+    const reqs = parts.map((t, i) => fetch("api/tts", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: (i === 0 ? tag : "") + t, voice: p.voice }) })
+      .then(async r => r.ok ? r.blob() : Promise.reject(await r.json().catch(() => ({})))));
+    reqs.forEach(q => q.catch(() => {}));
+    try {
+      for (const req of reqs) { const blob = await req; if (token !== speakToken) return; await playBlob(blob, token); }
+      return;
+    } catch (e) {
+      if (token !== speakToken) return;
+      ttsOK = false;
+      addMsg("", e && e.code === "model_terms_required" ? "Natural voices are off until the Groq Orpheus terms are accepted. Using the browser voice." : "Natural voice unavailable. Using the browser voice.", "sys");
+    }
+  }
+  await browserSpeak(text, p, token);
+}
+function stopSpeaking() { speakToken++; try { curAudio && curAudio.pause(); } catch {} curAudio = null; try { speechSynthesis.cancel(); } catch {} }
 
 /* ---------- UI helpers ---------- */
 const waveEl = $("wave");
@@ -432,9 +480,19 @@ function toast(t) {
   el.textContent = t; el.style.opacity = 1;
   clearTimeout(toastT); toastT = setTimeout(() => el.style.opacity = 0, 1400);
 }
-function setCompose(on) {
-  $("say").disabled = !on; $("sendBtn").disabled = !on; $("micBtn").disabled = !on || !micOK; $("hangBtn").disabled = !state.call || state.call.over;
-  if (on) $("say").focus({ preventScroll: true });
+function setStatus(text, kind = "") {
+  $("status").textContent = text;
+  $("statusDot").className = "dot " + kind;
+}
+let callStart = 0, timerT = null;
+function startTimer() {
+  callStart = Date.now(); clearInterval(timerT);
+  timerT = setInterval(() => { const s = Math.floor((Date.now() - callStart) / 1000); $("timer").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 500);
+}
+function stopTimer() { clearInterval(timerT); }
+function setControls() {
+  const live = !!state.call && !state.call.over;
+  $("hangBtn").disabled = !live; $("muteBtn").disabled = !live;
 }
 
 /* ---------- caller brain ---------- */
@@ -464,7 +522,7 @@ function localReply(c, line) {
 
 async function callerTurn(line) {
   const c = state.call;
-  busy = true; setCompose(false);
+  busy = true; setStatus(c.p.name.split(" ")[0] + " is thinking…", "think");
   const typing = addMsg(c.p.name, "…", "them typing");
   let res = null;
   if (aiOK) {
@@ -484,13 +542,18 @@ async function callerTurn(line) {
   const mood = ["neutral", "happy", "trusting", "suspicious", "confused", "angry"].includes(res.mood) ? res.mood : moodFromTrust(c.trust);
   c.turns.push({ who: "them", text: res.say });
   addMsg(c.p.name, res.say, "them");
-  face($("face"), c.p.look, mood, true); talk(true);
-  speak(res.say, c.p.pitch, c.p.name);
-  setTimeout(() => { if (state.call === c) { face($("face"), c.p.look, mood, false); talk(false); } }, Math.min(5000, 600 + res.say.length * 45));
   trustUI();
+  await callerSays(c, res.say, mood);
   busy = false;
+  if (state.call !== c || c.over) return;
   if (res.hangup || c.trust <= 0) { endCall(c.p.name + " hung up."); return; }
-  setCompose(true);
+  listen();
+}
+async function callerSays(c, text, mood) {
+  setStatus(c.p.name.split(" ")[0] + " is talking…", "speak");
+  face($("face"), c.p.look, mood, true); talk(true);
+  await speakAs(c.p, text, mood);
+  if (state.call === c) { face($("face"), c.p.look, mood, false); talk(false); }
 }
 
 /* ---------- call flow ---------- */
@@ -508,8 +571,9 @@ function incoming() {
   $("ring").hidden = false;
   startRing();
 }
-function pickUp() {
+async function pickUp() {
   stopRing(); $("ring").hidden = true;
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {}
   const p = state.pending; state.pending = null;
   state.call = { p, creds: mkCreds(), trust: 40 + Math.round(p.gull * 20), turns: [], verified: {}, earned: 0, over: false };
   $("log").innerHTML = ""; $("callerName").textContent = p.name;
@@ -518,9 +582,13 @@ function pickUp() {
   const open = p.open;
   state.call.turns.push({ who: "them", text: open });
   addMsg(p.name, open, "them");
-  face($("face"), p.look, "neutral", true); talk(true); speak(open, p.pitch, p.name);
-  setTimeout(() => { if (state.call && state.call.p === p) { face($("face"), p.look, "neutral"); talk(false); } }, 2600);
-  setCompose(true);
+  const c = state.call;
+  muted = false; $("muteBtn").setAttribute("aria-pressed", "false"); $("muteLbl").textContent = "Mute";
+  setControls(); startTimer();
+  const micReady = ensureMic();
+  await callerSays(c, open, "neutral");
+  if (state.call !== c || c.over) return;
+  if (await micReady) listen();
 }
 function decline() {
   stopRing(); $("ring").hidden = true; state.pending = null;
@@ -531,25 +599,26 @@ function endCall(reason) {
   const c = state.call; if (!c || c.over) return;
   c.over = true; busy = false;
   addMsg("", reason + " · call ended", "sys");
-  try { speechSynthesis.cancel(); } catch {}
+  stopSpeaking(); stopListening(); stopTimer();
+  setStatus("Call ended");
   talk(false); face($("face"), c.p.look, c.trust < 30 ? "angry" : "neutral");
   state.done++; state.results.push({ name: c.p.name, earned: c.earned, note: Object.keys(c.verified).length + "/4 verified" });
-  setCompose(false); bankUI(); taskUI();
+  setControls(); bankUI(); taskUI();
   beep([300, 250], .5);
   setTimeout(() => {
     if (state.call !== c) return;
     state.call = null; $("callerName").textContent = "No caller"; emptyFace($("face"));
+    $("timer").textContent = "00:00"; setStatus(state.onShift ? "Waiting for the next call…" : "Phone idle");
     crmUI(); bankUI(); trustUI();
     if (state.done >= SHIFT) shiftReport(); else setTimeout(incoming, 1200);
   }, 2600);
 }
-function send() {
-  const v = $("say").value.trim();
-  if (!v || busy || !state.call || state.call.over) return;
-  $("say").value = "";
-  state.call.turns.push({ who: "you", text: v });
-  addMsg("You", v, "you");
-  callerTurn(v);
+function playerSaid(text) {
+  const c = state.call;
+  if (!c || c.over || busy) return;
+  c.turns.push({ who: "you", text });
+  addMsg("You", text, "you");
+  callerTurn(text);
 }
 function shiftReport() {
   state.onShift = false; stopRing(); $("ring").hidden = true; taskUI();
@@ -568,38 +637,82 @@ function startShift() {
   setTimeout(incoming, 1200);
 }
 
-/* ---------- mic (speech to text via server) ---------- */
-let micOK = !!(navigator.mediaDevices && window.MediaRecorder);
-let rec = null, recChunks = [], recTimer = null;
-async function micToggle() {
-  const b = $("micBtn");
-  if (rec && rec.state === "recording") { rec.stop(); return; }
-  if (!state.call || state.call.over || busy) return;
-  let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch { addMsg("", "Mic blocked. Allow microphone access (site must be on https).", "sys"); return; }
-  try { speechSynthesis.cancel(); } catch {}
-  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => MediaRecorder.isTypeSupported?.(t)) || "";
-  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-  recChunks = [];
-  rec.ondataavailable = e => e.data.size && recChunks.push(e.data);
-  rec.onstop = async () => {
-    clearTimeout(recTimer); stream.getTracks().forEach(t => t.stop());
-    b.classList.remove("rec"); b.classList.add("wait"); b.disabled = true;
-    $("say").placeholder = "Transcribing…";
-    const blob = new Blob(recChunks, { type: rec.mimeType || "audio/webm" });
-    try {
-      const r = await fetch("api/stt", { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok && d.text) { $("say").value = d.text; send(); }
-      else addMsg("", d.error || "Couldn't hear you, try again.", "sys");
-    } catch { addMsg("", "Can't reach the server for speech.", "sys"); }
-    b.classList.remove("wait"); $("say").placeholder = "Type what you say…";
-    if (!busy && state.call && !state.call.over) setCompose(true);
-  };
-  rec.start();
-  b.classList.add("rec"); $("say").placeholder = "Listening… tap mic to send";
-  recTimer = setTimeout(() => rec && rec.state === "recording" && rec.stop(), 20000);
+/* ---------- hands-free mic: voice activity detection -> speech to text ---------- */
+let micStream = null, analyser = null, rec = null, vadT = null, muted = false, listenId = 0;
+const HALLUCINATIONS = /^(thank you\.?|thanks for watching!?|you|bye\.?|\.+|okay\.?)$/i;
+async function ensureMic() {
+  if (micStream) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { addMsg("", "This browser can't use a microphone.", "sys"); return false; }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const src = actx.createMediaStreamSource(micStream);
+    analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+    return true;
+  } catch {
+    addMsg("", "Microphone blocked. Allow it in the address bar (the site must be on https), then pick up the next call.", "sys");
+    setStatus("Mic blocked", "muted");
+    return false;
+  }
+}
+function rms() {
+  const buf = new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(buf);
+  let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length);
+}
+function stopListening() {
+  listenId++; clearInterval(vadT); vadT = null;
+  if (rec && rec.state === "recording") { rec.onstop = null; try { rec.stop(); } catch {} }
+  rec = null; $("micLevel").style.width = "0";
+}
+function listen() {
+  const c = state.call;
+  if (!c || c.over || busy || !micStream) return;
+  stopListening();
+  if (muted) { setStatus("Muted — tap Unmute to talk", "muted"); return; }
+  const id = listenId;
+  setStatus("Listening… just talk", "listen");
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
+  const r = new MediaRecorder(micStream, mime ? { mimeType: mime } : undefined);
+  const parts = []; r.ondataavailable = e => e.data.size && parts.push(e.data);
+  rec = r; r.start(250);
+  let floor = 0.01, loud = 0, spoke = false, lastVoice = 0, speechAt = 0;
+  const started = Date.now();
+  vadT = setInterval(() => {
+    if (id !== listenId) return;
+    const v = rms(), now = Date.now();
+    if (!spoke) floor = floor * 0.95 + Math.min(v, 0.05) * 0.05;
+    const th = Math.max(0.015, floor * 2.8);
+    $("micLevel").style.width = Math.min(100, v * 600) + "%";
+    if (v > th) { loud++; lastVoice = now; if (!spoke && loud >= 3) { spoke = true; speechAt = now; setStatus("You're talking…", "listen"); } }
+    else loud = 0;
+    if (spoke && (now - lastVoice > 1100 || now - speechAt > 20000)) finish(true);
+    else if (!spoke && now - started > 15000) finish(false);
+  }, 50);
+  function finish(useIt) {
+    clearInterval(vadT); vadT = null; $("micLevel").style.width = "0";
+    r.onstop = async () => {
+      if (id !== listenId) return;
+      if (!useIt) return listen();
+      const blob = new Blob(parts, { type: r.mimeType || "audio/webm" });
+      setStatus("…", "think");
+      let text = "";
+      try {
+        const res = await fetch("api/stt", { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+        const d = await res.json().catch(() => ({}));
+        if (res.ok) text = (d.text || "").trim(); else addMsg("", d.error || "Couldn't hear you.", "sys");
+      } catch { addMsg("", "Can't reach the server.", "sys"); }
+      if (id !== listenId || !state.call || state.call.over) return;
+      if (!text || text.length < 2 || HALLUCINATIONS.test(text)) return listen();
+      rec = null;
+      playerSaid(text);
+    };
+    try { r.stop(); } catch {}
+  }
+}
+function toggleMute() {
+  muted = !muted;
+  $("muteBtn").setAttribute("aria-pressed", String(muted)); $("muteLbl").textContent = muted ? "Unmute" : "Mute";
+  if (muted) { stopListening(); setStatus("Muted — tap Unmute to talk", "muted"); }
+  else if (!busy) listen();
 }
 
 /* ---------- wiring ---------- */
@@ -607,9 +720,7 @@ $("startBtn").onclick = startShift;
 $("againBtn").onclick = startShift;
 $("pickBtn").onclick = pickUp;
 $("declineBtn").onclick = decline;
-$("sendBtn").onclick = send;
-$("micBtn").onclick = micToggle;
-$("say").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+$("muteBtn").onclick = toggleMute;
 $("hangBtn").onclick = () => endCall("You hung up.");
 $("clockBtn").onclick = () => {
   if (!state.onShift) return startShift();
@@ -617,15 +728,9 @@ $("clockBtn").onclick = () => {
   setTimeout(shiftReport, state.call ? 2700 : 0);
   state.onShift = false;
 };
-$("ttsBtn").onclick = () => {
-  state.tts = !state.tts;
-  $("ttsBtn").textContent = state.tts ? "VOICE ON" : "VOICE OFF";
-  $("ttsBtn").setAttribute("aria-pressed", state.tts);
-  if (!state.tts) try { speechSynthesis.cancel(); } catch {}
-};
 
 emptyFace($("face")); taskUI(); crmUI(); bankUI(); trustUI();
-addMsg("", "Phone idle. Clock in to start your shift.", "sys");
+addMsg("", "Phone idle. Clock in to start your shift.", "sys"); setControls();
 
 })();
 </script>

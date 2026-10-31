@@ -16,9 +16,12 @@ const PORT = +process.env.PORT || 3070;
 const AI_URL = process.env.AI_URL || "https://api.groq.com/openai/v1/chat/completions";
 const AI_KEY = process.env.AI_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "openai/gpt-oss-120b";
-const RPM_PER_IP = +process.env.RPM_PER_IP || 20;
+const RPM_PER_IP = +process.env.RPM_PER_IP || 60;
 const STT_URL = process.env.STT_URL || "https://api.groq.com/openai/v1/audio/transcriptions";
 const STT_MODEL = process.env.STT_MODEL || "whisper-large-v3-turbo";
+const TTS_URL = process.env.TTS_URL || "https://api.groq.com/openai/v1/audio/speech";
+const TTS_MODEL = process.env.TTS_MODEL || "canopylabs/orpheus-v1-english";
+const TTS_VOICES = ["autumn", "diana", "hannah", "austin", "daniel", "troy"];
 
 const { CALLERS } = require("./public/callers.js");
 const THRESH = { username: 35, account: 50, password: 65, pin: 80 };
@@ -53,7 +56,9 @@ CONVERSATION SO FAR
 ${convo}
 AGENT: ${clip(line, 500)}
 
-Reply in character with 1-3 short spoken sentences (no stage directions, no emoji). Reply with only JSON:
+ROLES: you are ONLY the CALLER (the customer). The AGENT is the person who answered at the bank. Never act as the agent, never ask the agent for their account details or codes, and never repeat the agent's lines back. If the agent repeats themselves, react like a real person would (impatient, confused).
+
+Reply in character with 1-3 short spoken sentences, written the way people really talk on the phone (fillers like \"um\", \"oh\", \"hmm\" are fine; no stage directions, no asterisks, no emoji). Reply with only JSON:
 {"say": "...", "trustDelta": 5, "mood": "neutral|happy|trusting|suspicious|confused|angry", "hangup": false}`;
 }
 
@@ -132,10 +137,34 @@ async function handleStt(req, res) {
   } catch { send(res, 502, { error: "Speech service failed" }); }
 }
 
+async function handleTts(req, res) {
+  const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  if (limited(ip)) return send(res, 429, { error: "Too many requests, slow down" });
+  if (!AI_KEY) return send(res, 503, { error: "AI_KEY not set on server" });
+  let body = "";
+  for await (const ch of req) { body += ch; if (body.length > 2000) return send(res, 413, { error: "Too long" }); }
+  let b; try { b = JSON.parse(body); } catch { return send(res, 400, { error: "Bad JSON" }); }
+  const text = String(b.text || "").trim().slice(0, 200);
+  const voice = TTS_VOICES.includes(b.voice) ? b.voice : "hannah";
+  if (!text) return send(res, 400, { error: "No text" });
+  try {
+    const r = await fetch(TTS_URL, {
+      method: "POST", signal: AbortSignal.timeout(25000),
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_KEY },
+      body: JSON.stringify({ model: TTS_MODEL, input: text, voice, response_format: "wav" }),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); return send(res, 502, { error: "TTS: " + (d.error?.message || r.status), code: d.error?.code }); }
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.writeHead(200, { "Content-Type": "audio/wav", "Content-Length": buf.length });
+    res.end(buf);
+  } catch { send(res, 502, { error: "Voice service failed" }); }
+}
+
 http.createServer((req, res) => {
   const url = decodeURIComponent((req.url || "/").split("?")[0]);
   if (req.method === "POST" && url === "/api/caller") return handleCaller(req, res);
   if (req.method === "POST" && url === "/api/stt") return handleStt(req, res);
+  if (req.method === "POST" && url === "/api/tts") return handleTts(req, res);
   if (req.method !== "GET" && req.method !== "HEAD") return send(res, 405, { error: "Method not allowed" });
   const file = path.join(PUB, url === "/" ? "index.html" : url);
   if (!file.startsWith(PUB + path.sep)) { res.writeHead(403); return res.end(); }

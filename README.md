@@ -1,6 +1,10 @@
 # Hold The Line
 
-Scam call centre comedy game. Customers ring the "bank support line" (you). Talk them into reading out their fake banking details, punch them into Account Link, get paid. AI callers (Groq, free tier), callers speak with browser TTS, you talk back with the mic.
+Scam call centre comedy game. Customers ring the "bank support line" (you). Talk them into reading out their fake banking details, punch them into Account Link, get paid.
+
+Fully voice-based: pick up and just talk, like a real call. AI callers think for themselves (Groq gpt-oss-120b), hear you (Whisper) and answer in natural human voices (Orpheus). All on Groq's free tier.
+
+**One-time:** accept the Orpheus voice terms at https://console.groq.com/playground?model=canopylabs%2Forpheus-v1-english (until then callers use the browser's robot voice).
 
 No npm packages. Node 18+.
 
@@ -29,6 +33,7 @@ cd hold-the-line && git pull && bash install.sh
 | `AI_KEY` | Groq key (https://console.groq.com/keys) |
 | `AI_MODEL` | openai/gpt-oss-120b |
 | `STT_MODEL` | whisper-large-v3-turbo |
-| `RPM_PER_IP` | 20 |
+| `TTS_MODEL` | canopylabs/orpheus-v1-english |
+| `RPM_PER_IP` | 60 |
 
 Any OpenAI-compatible provider works: change `AI_URL`, `AI_MODEL`, `STT_URL`.
