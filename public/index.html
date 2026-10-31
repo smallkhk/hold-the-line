@@ -266,6 +266,17 @@ const mkCreds = () => ({
   account: rs(4, "0123456789") + "-" + rs(4, "0123456789"),
   pin: rs(4, "0123456789"),
 });
+const STREETS = ["Maple Ave", "Birch Lane", "Oak Street", "Harbor Road", "Cedar Court", "Willow Drive", "Mill Street", "Elm Row"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function mkFacts(p) {
+  const d = 1 + Math.floor(Math.random() * 28), m = MONTHS[Math.floor(Math.random() * 12)];
+  return {
+    dob: `${d} ${m} ${2026 - p.age}`,
+    address: `${10 + Math.floor(Math.random() * 980)} ${r(STREETS)}, ${p.city}`,
+    card: rs(4, "0123456789"),
+    since: String(2026 - Math.min(p.age - 18, 2 + Math.floor(Math.random() * 25))),
+  };
+}
 const norm = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const money = n => "$" + n.toLocaleString("en-US");
 
@@ -447,14 +458,15 @@ function crmUI() {
   const p = c.p;
   $("crmName").textContent = p.name;
   $("crmFile").innerHTML = "";
-  [["AGE", p.age], ["LOCATION", p.city], ["OCCUPATION", p.job], ["REASON", p.issue]].forEach(([k, v]) => {
+  const f = c.facts;
+  [["AGE", p.age], ["OCCUPATION", p.job], ["REASON", p.issue], ["DATE OF BIRTH", f.dob], ["ADDRESS", f.address], ["CARD ENDS", "•••• " + f.card], ["LAST TXN", p.txn], ["CUSTOMER SINCE", f.since]].forEach(([k, v]) => {
     const dt = document.createElement("dt"); dt.textContent = k;
     const dd = document.createElement("dd"); dd.textContent = v;
     $("crmFile").append(dt, dd);
   });
   const g = p.gull;
   $("crmNotes").hidden = false;
-  $("crmNotes").textContent = "Agent note: " + (g > .7 ? "Easy mark. Be friendly and patient." : g > .5 ? "Average. Build rapport before asking for anything." : g > .25 ? "Skeptical. Sound official and explain why you need it." : "Do not get your hopes up.");
+  $("crmNotes").textContent = "Agent note: " + (g > .7 ? "Easy mark. Be friendly and patient." : g > .5 ? "Average. Build rapport, they may test you on their details." : g > .25 ? "Skeptical. Expect to be quizzed. Use this file to answer." : "Paranoid. Will quiz you hard. Know this file cold.");
 }
 function bankUI() {
   const c = state.call, box = $("fields");
@@ -512,6 +524,9 @@ function setControls() {
 
 /* ---------- caller brain ---------- */
 /* offline fallback brain: simple keyword scoring */
+function badLine() {
+  return [ "Sorry, you broke up there. Say that again?", "Hello? You cut out for a second.", "Sorry, bad line. What was that?", "Hang on, I lost you. Can you repeat that?" ][Math.floor(Math.random() * 4)];
+}
 function localReply(c, line) {
   const t = line.toLowerCase(), p = c.p;
   let d = 0;
@@ -543,10 +558,11 @@ async function callerTurn(line) {
   if (aiOK) {
     try {
       const r = await fetch("api/caller", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caller: CALLERS.indexOf(c.p), creds: c.creds, trust: c.trust, turns: c.turns.slice(0, -1).slice(-18), line }) });
+        body: JSON.stringify({ caller: CALLERS.indexOf(c.p), creds: c.creds, facts: c.facts, trust: c.trust, turns: c.turns.slice(0, -1).slice(-18), line }) });
       const d = await r.json().catch(() => ({}));
-      if (r.ok) res = d; else addMsg("", (d.error || "AI unavailable") + " — scripted reply used.", "sys");
-      if (r.status === 404) aiOK = false;
+      if (r.ok) res = d;
+      else if (r.status === 404) aiOK = false;
+      else res = { say: badLine(), trustDelta: 0, mood: "confused", hangup: false };
     } catch { addMsg("", "Can't reach the server — scripted reply used.", "sys"); }
   }
   if (!res || typeof res.say !== "string") res = localReply(c, line);
@@ -597,7 +613,7 @@ async function pickUp() {
   try { const b = actx.createBuffer(1, 1, 22050), s0 = actx.createBufferSource(); s0.buffer = b; s0.connect(actx.destination); s0.start(); } catch {}
   try { speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); } catch {}
   const p = state.pending; state.pending = null;
-  state.call = { p, creds: mkCreds(), trust: 40 + Math.round(p.gull * 20), turns: [], verified: {}, earned: 0, over: false };
+  state.call = { p, creds: mkCreds(), facts: mkFacts(p), trust: 40 + Math.round(p.gull * 20), turns: [], verified: {}, earned: 0, over: false };
   $("log").innerHTML = ""; $("callerName").textContent = p.name;
   addMsg("", "Call connected · recording started", "sys");
   crmUI(); bankUI(); trustUI();

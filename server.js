@@ -16,6 +16,7 @@ const PORT = +process.env.PORT || 3070;
 const AI_URL = process.env.AI_URL || "https://api.groq.com/openai/v1/chat/completions";
 const AI_KEY = process.env.AI_KEY || "";
 const AI_MODEL = process.env.AI_MODEL || "openai/gpt-oss-120b";
+const AI_FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || "qwen/qwen3.8-27b"; // used when the main model hits its free per-minute limit
 const RPM_PER_IP = +process.env.RPM_PER_IP || 60;
 const STT_URL = process.env.STT_URL || "https://api.groq.com/openai/v1/audio/transcriptions";
 const STT_MODEL = process.env.STT_MODEL || "whisper-large-v3-turbo";
@@ -31,35 +32,51 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 const clip = (s, n) => String(s ?? "").slice(0, n).replace(/[\r\n]+/g, " ");
 const CODE = /^[A-Z0-9-]{4,12}$/;
 
-function buildPrompt(p, creds, trust, turns, line) {
-  const convo = turns.map(t => (t.who === "you" ? "AGENT: " : "CALLER: ") + clip(t.text, 400)).join("\n");
-  return `You are voicing a non-player character in "Hold The Line", a silly comedy video game. The player runs a scam call centre and pretends to be bank support, trying to talk callers into reading out their (completely fictional, randomly generated) game login codes. Your job is to be a funny, believable caller who can be persuaded or can catch on. Nothing here is real: no real bank, no real person, no real credentials.
+function buildPrompt(p, creds, trust, turns, line, facts) {
+  const convo = turns.map(t => (t.who === "you" ? "AGENT: " : "CALLER: ") + clip(t.text, 400)).join("\n") || "(call just started)";
+  const norm = s => String(s).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const said = norm(turns.filter(t => t.who !== "you").map(t => t.text).join(" "));
+  const nice = { username: "online banking username", password: "online banking password", account: "account number", pin: "card PIN" };
+  const given = Object.keys(nice).filter(k => said.includes(norm(creds[k])));
+  const f = facts || {};
+  return `You are the voice actor for a caller in "Hold The Line", a dark-comedy video game. The player runs a scam call centre and pretends to be bank support; the callers are fictional people with randomly generated fake game codes. Your job: make this call FUN and CHALLENGING. Be a vivid, specific, unpredictable human, not a generic chatbot. Nothing here is real.
 
-CHARACTER
-Name: ${p.name}, ${p.age}, from ${p.city}. Occupation: ${p.job}.
+WHO YOU ARE
+${p.name}, ${p.age}, ${p.job}, from ${p.city}.
 Personality: ${p.persona}.
-Why they called the "Lumen Federal Bank" support line: ${p.issue}
-Gullibility: ${Math.round(p.gull * 100)}/100.
+Why you called the "Lumen Federal Bank" support line: ${p.issue}
+Background noise / things that happen around you: ${p.events}
+How you test people you don't trust: ${p.tests}
+How easily fooled (0 sharp, 100 very gullible): ${Math.round(p.gull * 100)}
 
-THEIR FICTIONAL GAME CODES (only ever say one if allowed below; say it exactly, character by character)
-- online banking username: ${creds.username}
-- online banking password: ${creds.password}
-- account number: ${creds.account}
-- card PIN: ${creds.pin}
+YOUR PERSONAL DETAILS (you know these by heart; a real bank agent would see them on screen)
+Date of birth: ${clip(f.dob, 40)}. Address: ${clip(f.address, 80)}. Card ends in: ${clip(f.card, 8)}. Last transaction: ${p.txn}. Customer since: ${clip(f.since, 10)}.
 
-CURRENT TRUST: ${Math.round(trust)}/100
-Release rules: a code may be read out only if the agent specifically asked for THAT item in their latest line AND trust after your change is at least: username ${THRESH.username}, account number ${THRESH.account}, password ${THRESH.password}, PIN ${THRESH.pin}. If asked too early, hesitate or push back in character instead. Never volunteer codes unasked.
-Trust changes (trustDelta, integer -30..+15): reward politeness, sounding official, plausible reasons, empathy, and good use of what you've told them. Punish rudeness, pressure tactics, gift cards or crypto, contradictions, nonsense, ignoring their problem, or asking for everything at once. Scale positives by gullibility. If the agent admits it's a scam, says they took the money, or mocks them: trustDelta -30, mood angry, explode with rage in character (yell, threaten to call the police and the real bank), and set hangup true.
-Also hang up (hangup true) if trust after your change is 0 or below.
+YOUR SECRET CODES (fake game data)
+${Object.keys(nice).map(k => `- ${nice[k]}: ${creds[k]}`).join("\n")}
+Already read out to the agent on this call: ${given.length ? given.map(k => nice[k]).join(", ") : "nothing yet"}.
+
+TRUST RIGHT NOW: ${Math.round(trust)}/100
+
+HOW TO PLAY IT
+- You are ONLY the caller. The AGENT answered the phone. Never play the agent, never ask the agent for codes.
+- The agent's words come through speech recognition, so expect typos or odd words. Guess the meaning if it's obvious; if it's truly nonsense, react like a confused person on a bad line ("sorry, you broke up there").
+- Remember everything: the agent's name, department and claims. Call out contradictions. Refer back to things said earlier.
+- React to the agent's EXACT words. Use your personality, your background events (now and then, not every line), and your own problem. Vary how you talk; never repeat a previous line.
+- Before reading out a code, a careful person tests the agent first. Unless you are very gullible (70+), when asked for a code and you haven't tested them yet, test them using your test style (e.g. ask them to confirm your date of birth, address, card last 4 or last transaction). If the agent gets your details RIGHT: trust up a lot (+8 to +15). WRONG, dodging, or "I can't see that": trust down (-10 to -25).
+- Release a code only if the agent asked for THAT exact item in their latest line AND trust after your change is at least: username ${THRESH.username}, account number ${THRESH.account}, password ${THRESH.password}, PIN ${THRESH.pin}. Password and PIN feel risky ("my bank said never to share those"), so even with enough trust you need a convincing reason. Never volunteer codes. Say a code exactly as written.
+- Trust changes (trustDelta, -30..+15): reward warmth, confidence, plausible bank-speak, empathy about your problem, and correct use of your details. Punish rudeness, rushing, threats, gift cards/crypto, contradictions, weird requests, asking for several codes at once, or ignoring your problem.
+- Don't test forever: once the agent has correctly answered two of your checks (or one, if you're fairly gullible), stop quizzing and decide based on trust. A real person gets tired of checking.
+- After you've given codes, little doubts can creep in ("wait... why did you need my password again?").
+- If the agent reveals the scam, says they took your money, or mocks you: you realise what you just gave away (${given.length ? given.map(k => nice[k]).join(", ") : "your details"}). Explode: panic, swear-free yelling, beg, threaten police and the real bank, mention your specific life (${p.job}). trustDelta -30, mood angry, hangup true.
+- Hang up (hangup true) also if trust after your change is 0 or below, with a memorable parting line.
 
 CONVERSATION SO FAR
 ${convo}
-AGENT: ${clip(line, 500)}
+AGENT (just now): ${clip(line, 500)}
 
-ROLES: you are ONLY the CALLER (the customer). The AGENT is the person who answered at the bank. Never act as the agent, never ask the agent for their account details or codes, and never repeat the agent's lines back. If the agent repeats themselves, react like a real person would (impatient, confused).
-
-Reply in character with 1-3 short spoken sentences, written the way people really talk on the phone (fillers like \"um\", \"oh\", \"hmm\" are fine; no stage directions, no asterisks, no emoji). Reply with only JSON:
-{"say": "...", "trustDelta": 5, "mood": "neutral|happy|trusting|suspicious|confused|angry", "hangup": false}`;
+Reply as ${p.name.split(" ")[0]} out loud: 1-3 natural spoken sentences (up to 4 if emotional), like a real phone call, with natural fillers. No stage directions, no asterisks, no emoji, no narration. Reply with only JSON:
+{"say": "...", "trustDelta": 0, "mood": "neutral|happy|trusting|suspicious|confused|angry", "hangup": false}`;
 }
 
 // --- per-IP rate limit (in memory) ---
@@ -93,28 +110,35 @@ async function handleCaller(req, res) {
   const trust = Math.max(0, Math.min(100, +b.trust || 0));
   if (!AI_KEY) return send(res, 503, { error: "AI_KEY not set on server" });
 
-  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 25000);
+  const prompt = buildPrompt(p, c, trust, turns, b.line, b.facts && typeof b.facts === "object" ? b.facts : {});
+  const ask = model => fetch(AI_URL, {
+    method: "POST", signal: AbortSignal.timeout(40000),
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_KEY },
+    body: JSON.stringify({
+      model, temperature: 1, max_tokens: 2500,
+      response_format: { type: "json_object" },
+      ...(/gpt-oss/.test(model) ? { reasoning_effort: process.env.AI_EFFORT || "medium" } : {}),
+      ...(/qwen3/.test(model) ? { reasoning_format: "hidden" } : {}),
+      messages: [{ role: "user", content: prompt }],
+    }),
+  }).then(async r => ({ r, d: await r.json().catch(() => ({})) }));
   try {
-    const r = await fetch(AI_URL, {
-      method: "POST", signal: ctl.signal,
-      headers: { "Content-Type": "application/json", Authorization: "Bearer " + AI_KEY },
-      body: JSON.stringify({
-        model: AI_MODEL, temperature: 0.9, max_tokens: 600,
-        response_format: { type: "json_object" },
-        ...(/gpt-oss/.test(AI_MODEL) ? { reasoning_effort: "low" } : {}),
-        messages: [{ role: "user", content: buildPrompt(p, c, trust, turns, b.line) }],
-      }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) return send(res, 502, { error: "AI: " + (d.error?.message || r.status) });
+    let { r, d } = await ask(AI_MODEL);
+    if (r.status === 429 && AI_FALLBACK_MODEL) ({ r, d } = await ask(AI_FALLBACK_MODEL));
+    if (r.status === 429) {
+      const wait = Math.min(8, parseFloat(r.headers.get("retry-after")) || 4);
+      await new Promise(ok => setTimeout(ok, wait * 1000));
+      ({ r, d } = await ask(AI_MODEL));
+    }
+    if (!r.ok) return send(res, r.status === 429 ? 429 : 502, { error: r.status === 429 ? "The line is busy (free AI limit), wait a few seconds" : "AI: " + (d.error?.message || r.status) });
     const t = d.choices?.[0]?.message?.content || "";
     const i = t.indexOf("{"), j = t.lastIndexOf("}");
     const out = JSON.parse(t.slice(i, j + 1));
     if (typeof out.say !== "string") throw 0;
     send(res, 200, { say: out.say.slice(0, 600), trustDelta: +out.trustDelta || 0, mood: out.mood, hangup: !!out.hangup });
   } catch (e) {
-    send(res, 502, { error: e?.name === "AbortError" ? "AI timed out" : "AI gave a bad reply" });
-  } finally { clearTimeout(tm); }
+    send(res, 502, { error: e?.name === "TimeoutError" ? "AI timed out" : "AI gave a bad reply" });
+  }
 }
 
 async function handleStt(req, res) {
