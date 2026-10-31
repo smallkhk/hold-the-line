@@ -346,9 +346,24 @@ function chunks(text, max = 190) {
   if (cur.trim()) out.push(cur.trim());
   return out;
 }
-function playBlob(blob, token) {
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let curSrc = null;
+async function playBlob(blob, token) {
+  if (token !== speakToken) return;
+  if (actx) {
+    try {
+      if (actx.state !== "running") await actx.resume();
+      const buf = await actx.decodeAudioData(await blob.arrayBuffer());
+      if (token !== speakToken) return;
+      return await new Promise(res => {
+        const src = actx.createBufferSource(), g = actx.createGain();
+        g.gain.value = 1; src.buffer = buf; src.connect(g); g.connect(actx.destination);
+        curSrc = src; src.onended = () => { if (curSrc === src) curSrc = null; res(); };
+        src.start();
+      });
+    } catch {}
+  }
   return new Promise(res => {
-    if (token !== speakToken) return res();
     const url = URL.createObjectURL(blob), a = new Audio(url);
     curAudio = a;
     const done = () => { URL.revokeObjectURL(url); if (curAudio === a) curAudio = null; res(); };
@@ -390,7 +405,7 @@ async function speakAs(p, text, mood) {
   }
   await browserSpeak(text, p, token);
 }
-function stopSpeaking() { speakToken++; try { curAudio && curAudio.pause(); } catch {} curAudio = null; try { speechSynthesis.cancel(); } catch {} }
+function stopSpeaking() { speakToken++; try { curSrc && curSrc.stop(); } catch {} curSrc = null; try { curAudio && curAudio.pause(); } catch {} curAudio = null; try { speechSynthesis.cancel(); } catch {} }
 
 /* ---------- UI helpers ---------- */
 const waveEl = $("wave");
@@ -547,9 +562,14 @@ async function callerTurn(line) {
   busy = false;
   if (state.call !== c || c.over) return;
   if (res.hangup || c.trust <= 0) { endCall(c.p.name + " hung up."); return; }
-  listen();
+  if (await ensureMic()) listen();
+}
+function audioMode(kind) {
+  try { if (navigator.audioSession) navigator.audioSession.type = kind; } catch {}
 }
 async function callerSays(c, text, mood) {
+  if (IOS) releaseMic();
+  audioMode("playback");
   setStatus(c.p.name.split(" ")[0] + " is talking…", "speak");
   face($("face"), c.p.look, mood, true); talk(true);
   await speakAs(c.p, text, mood);
@@ -574,6 +594,8 @@ function incoming() {
 async function pickUp() {
   stopRing(); $("ring").hidden = true;
   try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch {}
+  try { const b = actx.createBuffer(1, 1, 22050), s0 = actx.createBufferSource(); s0.buffer = b; s0.connect(actx.destination); s0.start(); } catch {}
+  try { speechSynthesis.speak(new SpeechSynthesisUtterance(" ")); } catch {}
   const p = state.pending; state.pending = null;
   state.call = { p, creds: mkCreds(), trust: 40 + Math.round(p.gull * 20), turns: [], verified: {}, earned: 0, over: false };
   $("log").innerHTML = ""; $("callerName").textContent = p.name;
@@ -585,10 +607,10 @@ async function pickUp() {
   const c = state.call;
   muted = false; $("muteBtn").setAttribute("aria-pressed", "false"); $("muteLbl").textContent = "Mute";
   setControls(); startTimer();
-  const micReady = ensureMic();
+  const micReady = IOS ? null : ensureMic();
   await callerSays(c, open, "neutral");
   if (state.call !== c || c.over) return;
-  if (await micReady) listen();
+  if (await (micReady || ensureMic())) listen();
 }
 function decline() {
   stopRing(); $("ring").hidden = true; state.pending = null;
@@ -599,7 +621,7 @@ function endCall(reason) {
   const c = state.call; if (!c || c.over) return;
   c.over = true; busy = false;
   addMsg("", reason + " · call ended", "sys");
-  stopSpeaking(); stopListening(); stopTimer();
+  stopSpeaking(); releaseMic(); audioMode("playback"); stopTimer();
   setStatus("Call ended");
   talk(false); face($("face"), c.p.look, c.trust < 30 ? "angry" : "neutral");
   state.done++; state.results.push({ name: c.p.name, earned: c.earned, note: Object.keys(c.verified).length + "/4 verified" });
@@ -640,7 +662,12 @@ function startShift() {
 /* ---------- hands-free mic: voice activity detection -> speech to text ---------- */
 let micStream = null, analyser = null, rec = null, vadT = null, muted = false, listenId = 0;
 const HALLUCINATIONS = /^(thank you\.?|thanks for watching!?|you|bye\.?|\.+|okay\.?)$/i;
+function releaseMic() {
+  stopListening();
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; analyser = null; }
+}
 async function ensureMic() {
+  audioMode("play-and-record");
   if (micStream) return true;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { addMsg("", "This browser can't use a microphone.", "sys"); return false; }
   try {
@@ -712,7 +739,7 @@ function toggleMute() {
   muted = !muted;
   $("muteBtn").setAttribute("aria-pressed", String(muted)); $("muteLbl").textContent = muted ? "Unmute" : "Mute";
   if (muted) { stopListening(); setStatus("Muted — tap Unmute to talk", "muted"); }
-  else if (!busy) listen();
+  else if (!busy) ensureMic().then(ok => ok && listen());
 }
 
 /* ---------- wiring ---------- */
