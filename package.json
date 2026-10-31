@@ -1,0 +1,9 @@
+{
+  "name": "hold-the-line",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scam call centre comedy game with AI callers (Groq), TTS and voice input",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

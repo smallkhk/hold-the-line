@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hold The Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a dim after-hours call-centre desktop — Phone window left, Customer file + Bank link right, taskbar pinned to the bottom. Single dark look by choice. */
+:root{
+  --wall:#1d1612; --wall-2:#2a1f18; --glow:#f39a3c;
+  --win:#f1ece4; --win-ink:#1d1a17; --win-line:#cfc5b6; --chrome:#2f5d8a; --chrome-ink:#f5f1ea;
+  --console:#13212b; --console-2:#1b2f3c; --console-ink:#d9e7ee; --muted:#8aa2b0;
+  --you:#7a2f1c; --you-ink:#ffe9df; --them:#1f4f7a; --them-ink:#e6f1ff;
+  --ok:#3fbf6a; --warn:#f2b632; --bad:#e2483d; --gold:#ffcf4a;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(120% 80% at 70% 0%,#5a3518 0%,var(--wall-2) 40%,var(--wall) 100%);background-color:var(--wall);color:var(--console-ink);font-family:var(--f-body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 76px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.desk{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.desk{grid-template-columns:minmax(0,1fr)}}
+
+.win{background:var(--win);color:var(--win-ink);border:1px solid #0006;box-shadow:0 18px 40px -18px #000c,0 0 0 1px #ffffff14 inset;border-radius:6px;overflow:hidden;min-width:0}
+.bar{display:flex;align-items:center;gap:8px;background:var(--chrome);color:var(--chrome-ink);padding:6px 10px;font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
+.bar .dots{margin-left:auto;display:flex;gap:6px}
+.bar .dots i{width:10px;height:10px;border-radius:2px;background:#ffffff40;display:block}
+.bar svg{width:14px;height:14px}
+
+/* Phone */
+.phone .body{background:var(--console);color:var(--console-ink);display:flex;flex-direction:column}
+.trust{padding:12px 14px 10px;border-bottom:1px solid #ffffff10}
+.trust-top{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--f-display);font-weight:800;letter-spacing:.02em;font-size:14px;text-transform:uppercase}
+.trust-state{font-size:13px}
+.meter{height:7px;background:#ffffff14;border-radius:4px;margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;width:50%;background:var(--warn);transition:width .5s ease,background .5s}
+.trust-pct{font-family:var(--f-mono);font-size:12px;text-align:right;margin-top:4px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stage{position:relative;background:linear-gradient(#22404f,#173040);margin:12px 14px 0;border-radius:6px;border:1px solid #ffffff14;display:grid;place-items:center;padding:12px 0 6px}
+.stage .who{position:absolute;top:8px;left:0;right:0;text-align:center;font-family:var(--f-display);font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.stage svg.face{width:150px;height:150px;margin-top:14px}
+.wave{display:flex;gap:2px;height:16px;align-items:flex-end;margin-top:2px}
+.wave i{width:3px;background:#6fb6ff;border-radius:1px;height:3px;transition:height .12s}
+.idle-msg{color:var(--muted);font-size:14px;text-align:center;padding:40px 16px;line-height:1.5}
+.log{height:300px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.msg{max-width:84%;padding:8px 10px;border-radius:6px;line-height:1.4;font-size:14px;overflow-wrap:anywhere}
+.msg b{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;margin-bottom:3px;opacity:.8}
+.msg.them{background:var(--them);color:var(--them-ink);align-self:flex-start}
+.msg.you{background:var(--you);color:var(--you-ink);align-self:flex-end}
+.msg.sys{align-self:center;background:none;color:var(--muted);font-family:var(--f-mono);font-size:12px;text-align:center;max-width:100%}
+.msg.typing{opacity:.7;font-style:italic}
+.compose{display:flex;gap:8px;padding:10px 14px;border-top:1px solid #ffffff10}
+.compose input{flex:1;min-width:0;background:var(--console-2);border:1px solid #ffffff1c;color:var(--console-ink);border-radius:6px;padding:10px 12px;font:inherit}
+.controls{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
+.btn{border:0;border-radius:6px;padding:10px 14px;font-weight:700;background:#ffffff1a;color:var(--console-ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.send{background:var(--chrome);color:#fff}
+.btn.mic{background:#ffffff1a;color:var(--console-ink);display:grid;place-items:center;padding:10px 12px}
+.btn.mic.rec{background:var(--bad);color:#fff;animation:pulse 1s infinite}
+.btn.mic.wait{opacity:.6}
+.btn.pick{background:var(--ok);color:#06210f;flex:1}
+.btn.hang{background:var(--bad);color:#fff;flex:1}
+.btn.small{padding:8px 10px;font-size:13px}
+.hint{font-size:12px;color:var(--muted);padding:0 14px 12px;line-height:1.45}
+
+/* incoming overlay */
+.ring{position:absolute;inset:0;background:#0b151ccc;backdrop-filter:blur(3px);display:grid;place-items:center;z-index:2}
+.ring .card{background:#0f1d26;border:1px solid #ffffff22;border-radius:10px;padding:18px 22px;text-align:center;box-shadow:0 20px 50px #000a}
+.ring .card h3{margin:8px 0 2px;font-family:var(--f-display);font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em}
+.ring .card p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.ring .row{display:flex;gap:18px;justify-content:center}
+.circ{width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center}
+.circ svg{width:24px;height:24px}
+.circ.no{background:var(--bad);color:#fff}.circ.yes{background:var(--ok);color:#06210f;animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
+
+.right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.crm .body,.bank .body{padding:14px}
+.eyebrow{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7b6f60}
+.crm h2,.bank h2{font-family:var(--f-display);font-weight:800;font-size:20px;margin:2px 0 10px;text-wrap:balance}
+.file{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;font-size:14px}
+.file dt{color:#7b6f60;font-size:12px;font-family:var(--f-mono);padding-top:2px}
+.file dd{margin:0}
+.notes{margin-top:10px;background:#fffbe0;border:1px dashed #d8c97a;padding:8px 10px;font-size:13px;line-height:1.45;border-radius:4px}
+.banner{font-family:var(--f-mono);font-size:12px;background:#e6efe6;border:1px solid #b9d4bb;color:#25502c;padding:6px 9px;border-radius:4px;margin-bottom:10px;font-variant-numeric:tabular-nums}
+.fields{display:grid;gap:10px}
+.field label{display:block;font-size:12px;font-family:var(--f-mono);color:#5d544a;margin-bottom:4px}
+.field .row{display:flex;gap:8px}
+.field input{flex:1;min-width:0;border:1px solid var(--win-line);background:#fff;color:var(--win-ink);border-radius:4px;padding:9px 10px;font-family:var(--f-mono);font-size:14px;text-transform:uppercase}
+.field input:disabled{background:#e8f3e9;color:#25502c}
+.field .vbtn{background:var(--chrome);color:#fff;border:0;border-radius:4px;padding:0 14px;font-weight:700;font-size:13px}
+.field .vbtn:disabled{background:#9db8a0}
+.field .st{font-size:12px;margin-top:3px;min-height:15px;font-family:var(--f-mono)}
+.field .st.ok{color:#2a7a3b}.field .st.no{color:#b23127}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* taskbar */
+.task{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#101820f2;border-top:1px solid #ffffff18;display:flex;align-items:center;gap:10px;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));font-family:var(--f-mono);font-size:12px}
+.task .brand{font-family:var(--f-display);font-weight:800;font-size:15px;color:var(--glow);letter-spacing:.02em;white-space:nowrap}
+.task .clock{background:var(--gold);color:#2a1d00;border:0;border-radius:4px;padding:6px 10px;font-weight:700;font-family:var(--f-mono);font-size:11px;line-height:1.2;text-align:center}
+.task .stat{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.task .stat b{color:var(--gold);font-weight:700}
+.task .sp{flex:1}
+.task .tts{background:#ffffff14;border:0;color:var(--console-ink);border-radius:4px;padding:6px 9px;font-family:var(--f-mono);font-size:11px}
+@media (max-width:560px){.task .brand{display:none}.task .stat.calls{display:none}}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:10;background:#0a0705d9;display:grid;place-items:center;padding:16px}
+.modal .win{max-width:460px;width:100%}
+.modal .body{padding:18px}
+.modal h2{font-family:var(--f-display);font-weight:800;font-size:28px;line-height:1.05;margin:4px 0 10px;text-wrap:balance}
+.modal p{line-height:1.5;margin:0 0 10px;font-size:14px}
+.modal ul{margin:0 0 14px;padding-left:18px;line-height:1.55;font-size:14px}
+.modal .go{width:100%;background:var(--chrome);color:#fff;border:0;border-radius:6px;padding:12px;font-weight:700;font-size:15px}
+.ai-note{font-family:var(--f-mono);font-size:11px;color:#7b6f60;margin-top:10px}
+.big{font-family:var(--f-display);font-weight:800;font-size:44px;color:#2a7a3b;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--gold);color:#2a1d00;font-weight:700;padding:8px 14px;border-radius:6px;z-index:9;font-size:14px;box-shadow:0 10px 30px #000a;transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="desk">
+  <section class="win phone" aria-label="Phone">
+    <div class="bar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>Phone — Lumen Federal "Support" Line<span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="body" style="position:relative">
+      <div class="trust">
+        <div class="trust-top"><span>Caller trust</span><span class="trust-state" id="trustState">—</span></div>
+        <div class="meter"><i id="trustBar"></i></div>
+        <div class="trust-pct" id="trustPct">—</div>
+      </div>
+      <div class="stage" id="stage">
+        <div class="who" id="callerName">No caller</div>
+        <svg class="face" id="face" viewBox="0 0 120 120" aria-hidden="true"></svg>
+        <div class="wave" id="wave"></div>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="compose">
+        <input id="say" autocomplete="off" placeholder="Type what you say…" disabled>
+        <button class="btn mic" id="micBtn" disabled aria-label="Talk" title="Tap to talk, tap again to send"><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg></button>
+        <button class="btn send" id="sendBtn" disabled>Say</button>
+      </div>
+      <div class="controls">
+        <button class="btn hang" id="hangBtn" disabled>Hang up</button>
+      </div>
+      <div class="hint" id="hint">Callers think they reached their bank's support line. Win their trust, get them to read out their login details, then punch them into Account Link.</div>
+      <div class="ring" id="ring" hidden>
+        <div class="card">
+          <svg class="face" id="ringFace" viewBox="0 0 120 120" width="84" height="84" aria-hidden="true"></svg>
+          <h3 id="ringName">—</h3>
+          <p>Incoming call…</p>
+          <div class="row">
+            <button class="circ no" id="declineBtn" aria-label="Decline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            <button class="circ yes" id="pickBtn" aria-label="Pick up"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="right">
+    <section class="win crm" aria-label="Customer info">
+      <div class="bar">Customer Intelligence<span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="eyebrow">Caller file</div>
+        <h2 id="crmName">Waiting for a customer…</h2>
+        <dl class="file" id="crmFile"></dl>
+        <div class="notes" id="crmNotes" hidden></div>
+      </div>
+    </section>
+    <section class="win bank" aria-label="Bank account link">
+      <div class="bar">Bank — Account Link<span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="eyebrow">Connect and validate a caller's online banking credentials</div>
+        <h2>Account Link</h2>
+        <div class="banner" id="banner">No active call</div>
+        <div class="fields" id="fields"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="task">
+  <span class="brand">Hold The Line</span>
+  <button class="clock" id="clockBtn">CLOCK IN<br><span id="clockSub">SHIFT 0/6</span></button>
+  <span class="sp"></span>
+  <span class="stat calls">CALLS <b id="callsStat">0</b></span>
+  <span class="stat">TEAM <b id="teamStat">$0</b></span>
+  <button class="tts" id="ttsBtn" aria-pressed="true">VOICE ON</button>
+</div>
+
+<div class="modal" id="intro">
+  <div class="win">
+    <div class="bar">Onboarding.txt<span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="body">
+      <div class="eyebrow">Night shift · Desk 14</div>
+      <h2>Welcome to the worst call centre in the world.</h2>
+      <p>Customers dial what they think is Lumen Federal Bank's help line. It's you. Each one has four details worth $200 apiece:</p>
+      <ul>
+        <li>Online banking username <code>XX-XX</code></li>
+        <li>Online banking password <code>XX-X-XX</code></li>
+        <li>Account number <code>XXXX-XXXX</code></li>
+        <li>Card PIN <code>XXXX</code></li>
+      </ul>
+      <p>Talk them into reading each one out, type it into Account Link, hit Verify. Push too hard or slip up and trust drops. At zero they hang up. Six calls per shift.</p>
+      <button class="go" id="startBtn">Clock in</button>
+      <div class="ai-note" id="aiNote">Callers are improvised live by AI and speak out loud. Tap the mic to talk back.</div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="report" hidden>
+  <div class="win">
+    <div class="bar">Shift_Report.pdf<span class="dots"><i></i><i></i><i></i></span></div>
+    <div class="body">
+      <div class="eyebrow">Shift over</div>
+      <div class="big" id="repTotal">$0</div>
+      <h2 id="repTitle">—</h2>
+      <ul id="repList"></ul>
+      <button class="go" id="againBtn">Start a new shift</button>
+    </div>
+  </div>
+</div>
+
+<script src="callers.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const SHIFT = 6, PER = 200;
+const THRESH = { username: 35, account: 50, password: 65, pin: 80 };
+const FIELDS = [
+  { k: "username", label: "Online Banking Username (XX-XX)" },
+  { k: "password", label: "Online Banking Password (XX-X-XX)" },
+  { k: "account",  label: "Bank Account Number (XXXX-XXXX)" },
+  { k: "pin",      label: "Card PIN (XXXX)" },
+];
+
+
+const L = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const r = s => s[Math.floor(Math.random() * s.length)];
+const rs = (n, s = L) => Array.from({ length: n }, () => r(s)).join("");
+const mkCreds = () => ({
+  username: rs(2) + "-" + rs(2),
+  password: rs(2) + "-" + rs(1) + "-" + rs(2),
+  account: rs(4, "0123456789") + "-" + rs(4, "0123456789"),
+  pin: rs(4, "0123456789"),
+});
+const norm = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const money = n => "$" + n.toLocaleString("en-US");
+
+let state = { earned: 0, done: 0, onShift: false, results: [], queue: [], call: null, tts: true };
+let busy = false, aiOK = true;
+
+/* ---------- face ---------- */
+function face(svg, look, mood = "neutral", talking = false) {
+  const m = {
+    neutral:   { bl: 0, br: 0, mouth: "M48 86 Q60 90 72 86" },
+    happy:     { bl: -4, br: 4, mouth: "M44 82 Q60 98 76 82" },
+    trusting:  { bl: -2, br: 2, mouth: "M46 84 Q60 94 74 84" },
+    suspicious:{ bl: 10, br: -4, mouth: "M48 88 L72 85" },
+    confused:  { bl: -10, br: 8, mouth: "M48 88 Q54 84 60 88 Q66 92 72 88" },
+    angry:     { bl: 16, br: -16, mouth: "M46 92 Q60 80 74 92" },
+  }[mood] || {};
+  const st = look.style, h = look.hair;
+  const hair = {
+    bald: `<path d="M24 52 Q22 40 30 36 M96 52 Q98 40 90 36" stroke="${h}" stroke-width="7" fill="none" stroke-linecap="round"/>`,
+    bun: `<circle cx="60" cy="14" r="11" fill="${h}"/><path d="M22 58 Q20 20 60 20 Q100 20 98 58 Q90 34 60 32 Q30 34 22 58Z" fill="${h}"/>`,
+    fade: `<path d="M26 46 Q30 20 60 20 Q90 20 94 46 Q86 32 60 31 Q34 32 26 46Z" fill="${h}"/>`,
+    curls: `<g fill="${h}">${[24,36,48,60,72,84,96].map((x,i)=>`<circle cx="${x}" cy="${30 + (i%2)*6 + Math.abs(x-60)/3}" r="11"/>`).join("")}</g>`,
+    spiky: `<path d="M24 50 L28 24 L38 34 L44 14 L54 30 L62 10 L70 30 L80 14 L84 34 L94 24 L96 50 Q88 34 60 33 Q32 34 24 50Z" fill="${h}"/>`,
+    big: `<path d="M14 80 Q6 14 60 12 Q114 14 106 80 Q100 58 96 46 Q86 30 60 30 Q34 30 24 46 Q20 58 14 80Z" fill="${h}"/>`,
+    cap: `<path d="M24 46 Q26 18 60 18 Q94 18 96 46Z" fill="#b8322a"/><path d="M60 42 L108 46 Q108 52 96 50 L60 48Z" fill="#8c241e"/><text x="54" y="38" font-size="10" font-family="sans-serif" font-weight="700" fill="#fff">F</text>`,
+    pony: `<path d="M98 50 Q118 60 108 92 Q100 70 92 58Z" fill="${h}"/><path d="M24 54 Q22 20 60 20 Q98 20 96 54 Q88 32 60 31 Q32 32 24 54Z" fill="${h}"/>`,
+  }[st] || "";
+  const eyeY = 60;
+  const mouthAnim = talking ? `<animateTransform attributeName="transform" type="scale" values="1 1;1 1.9;1 .6;1 1.6;1 1" dur=".45s" repeatCount="indefinite" additive="sum"/>` : "";
+  svg.innerHTML = `
+    ${st === "big" ? hair : ""}
+    <ellipse cx="18" cy="66" rx="7" ry="10" fill="${look.skin}" stroke="#0005"/>
+    <ellipse cx="102" cy="66" rx="7" ry="10" fill="${look.skin}" stroke="#0005"/>
+    <ellipse cx="60" cy="62" rx="42" ry="46" fill="${look.skin}" stroke="#0006" stroke-width="1.5"/>
+    ${st !== "big" ? hair : ""}
+    <g stroke="#1b1410" stroke-width="4" stroke-linecap="round">
+      <line x1="34" y1="46" x2="50" y2="46" transform="rotate(${m.bl} 42 46)"/>
+      <line x1="70" y1="46" x2="86" y2="46" transform="rotate(${m.br} 78 46)"/>
+    </g>
+    <g fill="#fff" stroke="#1b1410" stroke-width="1.5">
+      <ellipse cx="43" cy="${eyeY}" rx="8" ry="${mood === "suspicious" ? 4 : 7}"/>
+      <ellipse cx="77" cy="${eyeY}" rx="8" ry="${mood === "angry" ? 5 : 7}"/>
+    </g>
+    <circle cx="${mood === "suspicious" ? 46 : 44}" cy="${eyeY + 1}" r="3.4" fill="#1b1410"/>
+    <circle cx="${mood === "suspicious" ? 80 : 78}" cy="${eyeY + 1}" r="3.4" fill="#1b1410"/>
+    ${look.glasses ? `<g fill="none" stroke="#2b2b2b" stroke-width="2.5"><circle cx="43" cy="${eyeY}" r="12"/><circle cx="77" cy="${eyeY}" r="12"/><line x1="55" y1="${eyeY}" x2="65" y2="${eyeY}"/></g>` : ""}
+    <path d="M60 64 Q56 74 60 76" fill="none" stroke="#0006" stroke-width="2.5" stroke-linecap="round"/>
+    <g transform="translate(60 87)"><g transform="translate(-60 -87)">
+      <path d="${m.mouth}" fill="${mood === "happy" ? "#5a1d18" : "none"}" stroke="#1b1410" stroke-width="3.5" stroke-linecap="round"/>
+    </g>${mouthAnim}</g>`;
+}
+function emptyFace(svg) {
+  svg.innerHTML = `<circle cx="60" cy="60" r="44" fill="#ffffff10" stroke="#ffffff26" stroke-dasharray="4 5"/><text x="60" y="66" text-anchor="middle" font-size="18" fill="#8aa2b0" font-family="monospace">— —</text>`;
+}
+
+/* ---------- audio ---------- */
+let actx = null;
+function beep(freqs = [440, 480], dur = .35) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const g = actx.createGain(); g.gain.value = .05; g.connect(actx.destination);
+    freqs.forEach(f => { const o = actx.createOscillator(); o.frequency.value = f; o.connect(g); o.start(); o.stop(actx.currentTime + dur); });
+  } catch {}
+}
+let ringTimer = null;
+function startRing() { stopRing(); beep(); ringTimer = setInterval(() => beep(), 1200); }
+function stopRing() { clearInterval(ringTimer); ringTimer = null; }
+const FEMALE = /female|woman|zira|samantha|victoria|karen|moira|tessa|fiona|susan|hazel|serena|allison|ava|jenny|aria|libby|sonia|natasha|google uk english female|google us english/i;
+const MALE = /male|man|david|mark|daniel|alex|fred|george|ryan|guy|thomas|oliver|arthur|google uk english male/i;
+function pickVoice(name) {
+  try {
+    const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+    if (!vs.length) return null;
+    const fem = ["Marisol", "Agnes", "Bea", "Tammy"].some(n => name.startsWith(n));
+    const pool = vs.filter(v => fem ? FEMALE.test(v.name) && !/\bmale\b/i.test(v.name) : MALE.test(v.name) && !/female/i.test(v.name));
+    const list = pool.length ? pool : vs;
+    let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return list[h % list.length];
+  } catch { return null; }
+}
+try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); } catch {}
+function speak(text, pitch = 1, name = "") {
+  if (!state.tts) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.pitch = pitch; u.rate = 1.02;
+    const v = pickVoice(name); if (v) { u.voice = v; u.lang = v.lang; }
+    speechSynthesis.speak(u);
+  } catch {}
+}
+
+/* ---------- UI helpers ---------- */
+const waveEl = $("wave");
+for (let i = 0; i < 28; i++) waveEl.appendChild(document.createElement("i"));
+let waveTimer = null;
+function talk(on) {
+  clearInterval(waveTimer);
+  const bars = [...waveEl.children];
+  if (on) waveTimer = setInterval(() => bars.forEach(b => b.style.height = (3 + Math.random() * 13) + "px"), 110);
+  else bars.forEach(b => b.style.height = "3px");
+}
+function addMsg(who, text, cls) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if (who) { const b = document.createElement("b"); b.textContent = who; d.appendChild(b); }
+  d.appendChild(document.createTextNode(text));
+  $("log").appendChild(d); $("log").scrollTop = 1e6;
+  return d;
+}
+function moodFromTrust(t) { return t <= 0 ? "angry" : t < 30 ? "angry" : t < 45 ? "suspicious" : t < 60 ? "neutral" : "trusting"; }
+function trustUI() {
+  const c = state.call, t = c ? c.trust : null;
+  const bar = $("trustBar");
+  if (t == null) { $("trustState").textContent = "—"; $("trustPct").textContent = "—"; bar.style.width = "0"; return; }
+  const label = t < 30 ? ["ANGRY", "var(--bad)"] : t < 45 ? ["SUSPICIOUS", "var(--warn)"] : t < 60 ? ["NEUTRAL", "#c9d6dd"] : ["TRUSTING", "var(--ok)"];
+  $("trustState").textContent = label[0]; $("trustState").style.color = label[1];
+  bar.style.width = Math.max(2, t) + "%"; bar.style.background = label[1];
+  $("trustPct").textContent = Math.round(t) + "%";
+}
+function taskUI() {
+  $("teamStat").textContent = money(state.earned);
+  $("callsStat").textContent = state.done;
+  $("clockSub").textContent = `SHIFT ${state.done}/${SHIFT}`;
+  $("clockBtn").firstChild.textContent = state.onShift ? "CLOCK OUT" : "CLOCK IN";
+}
+function crmUI() {
+  const c = state.call;
+  if (!c) { $("crmName").textContent = "Waiting for a customer…"; $("crmFile").innerHTML = ""; $("crmNotes").hidden = true; return; }
+  const p = c.p;
+  $("crmName").textContent = p.name;
+  $("crmFile").innerHTML = "";
+  [["AGE", p.age], ["LOCATION", p.city], ["OCCUPATION", p.job], ["REASON", p.issue]].forEach(([k, v]) => {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    $("crmFile").append(dt, dd);
+  });
+  const g = p.gull;
+  $("crmNotes").hidden = false;
+  $("crmNotes").textContent = "Agent note: " + (g > .7 ? "Easy mark. Be friendly and patient." : g > .5 ? "Average. Build rapport before asking for anything." : g > .25 ? "Skeptical. Sound official and explain why you need it." : "Do not get your hopes up.");
+}
+function bankUI() {
+  const c = state.call, box = $("fields");
+  box.innerHTML = "";
+  if (!c) { $("banner").textContent = "No active call"; return; }
+  const n = Object.keys(c.verified).length;
+  $("banner").textContent = n === 4 ? `Link complete — ${money(n * PER)} earned (4 / 4 verified)` : `Enter the information for ${money(4 * PER)} (${n} / 4 verified)`;
+  FIELDS.forEach(f => {
+    const ok = !!c.verified[f.k];
+    const wrap = document.createElement("div"); wrap.className = "field";
+    wrap.innerHTML = `<label for="f_${f.k}"></label><div class="row"><input id="f_${f.k}" autocomplete="off" spellcheck="false"><button class="vbtn">Verify</button></div><div class="st"></div>`;
+    wrap.querySelector("label").textContent = f.label;
+    const inp = wrap.querySelector("input"), btn = wrap.querySelector("button"), st = wrap.querySelector(".st");
+    if (ok) { inp.value = c.creds[f.k]; inp.disabled = true; btn.disabled = true; btn.textContent = "Verified"; st.className = "st ok"; st.textContent = "Verified ✓"; }
+    if (c.over && !ok) { inp.disabled = true; btn.disabled = true; }
+    const go = () => verify(f.k, inp, st, wrap);
+    btn.onclick = go; inp.onkeydown = e => { if (e.key === "Enter") go(); };
+    box.appendChild(wrap);
+  });
+}
+function verify(k, inp, st, wrap) {
+  const c = state.call; if (!c || c.verified[k]) return;
+  if (!inp.value.trim()) { inp.focus(); return; }
+  if (norm(inp.value) === norm(c.creds[k])) {
+    c.verified[k] = true; state.earned += PER; c.earned += PER;
+    toast(`+${money(PER)}`); beep([880, 1320], .12);
+    bankUI(); taskUI();
+  } else {
+    st.className = "st no"; st.textContent = "Rejected — details don't match";
+    wrap.classList.remove("shake"); void wrap.offsetWidth; wrap.classList.add("shake");
+    beep([180], .2);
+  }
+}
+let toastT;
+function toast(t) {
+  let el = document.querySelector(".toast");
+  if (!el) { el = document.createElement("div"); el.className = "toast"; document.body.appendChild(el); }
+  el.textContent = t; el.style.opacity = 1;
+  clearTimeout(toastT); toastT = setTimeout(() => el.style.opacity = 0, 1400);
+}
+function setCompose(on) {
+  $("say").disabled = !on; $("sendBtn").disabled = !on; $("micBtn").disabled = !on || !micOK; $("hangBtn").disabled = !state.call || state.call.over;
+  if (on) $("say").focus({ preventScroll: true });
+}
+
+/* ---------- caller brain ---------- */
+/* offline fallback brain: simple keyword scoring */
+function localReply(c, line) {
+  const t = line.toLowerCase(), p = c.p;
+  let d = 0;
+  const pos = ["sorry", "help", "secure", "security", "protect", "verify", "confirm", "sir", "ma'am", "madam", "please", "thank", "fraud", "department", "understand", "refund", "fix", "resolve"];
+  const neg = ["gift card", "bitcoin", "crypto", "scam", "stupid", "idiot", "hurry", "now!", "shut up", "wire", "western union", "steal", "stole", "your money is gone", "took your money"];
+  pos.forEach(w => t.includes(w) && (d += 4 * (0.5 + p.gull)));
+  neg.forEach(w => t.includes(w) && (d -= 18));
+  if (t.length < 6) d -= 4;
+  if (/(username|password|account|pin).*(username|password|account|pin)/.test(t)) d -= 8;
+  d = Math.max(-30, Math.min(15, Math.round(d + (Math.random() * 6 - 2))));
+  const nt = c.trust + d;
+  const ask = /password/.test(t) ? "password" : /\bpin\b/.test(t) ? "pin" : /account (number|no|#)|account/.test(t) ? "account" : /user ?name|login/.test(t) ? "username" : null;
+  const nice = { username: "username", password: "password", account: "account number", pin: "PIN" };
+  let say;
+  if (nt <= 0 || /scam|stole|took your money/.test(t)) return { say: "You know what? Something's not right here. I'm calling my branch in person. Goodbye!", trustDelta: d, mood: "angry", hangup: true };
+  if (ask && nt >= THRESH[ask]) say = r([`Okay, okay. My ${nice[ask]} is ${c.creds[ask]}.`, `Fine, if it fixes this. It's ${c.creds[ask]}. That's my ${nice[ask]}.`, `Let me find it… right, ${nice[ask]}: ${c.creds[ask]}.`]);
+  else if (ask) say = r([`My ${nice[ask]}? Why would you need that?`, `Hmm, I don't know about giving out my ${nice[ask]} over the phone.`, `Can't you see that on your screen already?`]);
+  else if (d > 3) say = r(["Oh, that's a relief. So what do we do next?", "Okay, you sound like you know what you're doing.", "Thank you, dear. I just want this sorted out."]);
+  else if (d < 0) say = r(["Hold on, that sounds a bit odd.", "I'm not sure I like where this is going.", "Excuse me? Who did you say you were again?"]);
+  else say = r(["Sorry, can you say that again?", "Right… and?", "So can you fix my problem or not?"]);
+  return { say, trustDelta: d, mood: moodFromTrust(nt), hangup: false };
+}
+
+async function callerTurn(line) {
+  const c = state.call;
+  busy = true; setCompose(false);
+  const typing = addMsg(c.p.name, "…", "them typing");
+  let res = null;
+  if (aiOK) {
+    try {
+      const r = await fetch("api/caller", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caller: CALLERS.indexOf(c.p), creds: c.creds, trust: c.trust, turns: c.turns.slice(-18), line }) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) res = d; else addMsg("", (d.error || "AI unavailable") + " — scripted reply used.", "sys");
+      if (r.status === 404) aiOK = false;
+    } catch { addMsg("", "Can't reach the server — scripted reply used.", "sys"); }
+  }
+  if (!res || typeof res.say !== "string") res = localReply(c, line);
+  typing.remove();
+  if (state.call !== c) { busy = false; return; }
+  const delta = Math.max(-30, Math.min(15, Number(res.trustDelta) || 0));
+  c.trust = Math.max(0, Math.min(100, c.trust + delta));
+  const mood = ["neutral", "happy", "trusting", "suspicious", "confused", "angry"].includes(res.mood) ? res.mood : moodFromTrust(c.trust);
+  c.turns.push({ who: "them", text: res.say });
+  addMsg(c.p.name, res.say, "them");
+  face($("face"), c.p.look, mood, true); talk(true);
+  speak(res.say, c.p.pitch, c.p.name);
+  setTimeout(() => { if (state.call === c) { face($("face"), c.p.look, mood, false); talk(false); } }, Math.min(5000, 600 + res.say.length * 45));
+  trustUI();
+  busy = false;
+  if (res.hangup || c.trust <= 0) { endCall(c.p.name + " hung up."); return; }
+  setCompose(true);
+}
+
+/* ---------- call flow ---------- */
+function nextCaller() {
+  if (!state.queue.length) state.queue = [...CALLERS].sort(() => Math.random() - .5);
+  return state.queue.pop();
+}
+function incoming() {
+  if (!state.onShift) return;
+  if (state.done >= SHIFT) return shiftReport();
+  const p = nextCaller();
+  state.pending = p;
+  face($("ringFace"), p.look, "neutral");
+  $("ringName").textContent = p.name;
+  $("ring").hidden = false;
+  startRing();
+}
+function pickUp() {
+  stopRing(); $("ring").hidden = true;
+  const p = state.pending; state.pending = null;
+  state.call = { p, creds: mkCreds(), trust: 40 + Math.round(p.gull * 20), turns: [], verified: {}, earned: 0, over: false };
+  $("log").innerHTML = ""; $("callerName").textContent = p.name;
+  addMsg("", "Call connected · recording started", "sys");
+  crmUI(); bankUI(); trustUI();
+  const open = p.open;
+  state.call.turns.push({ who: "them", text: open });
+  addMsg(p.name, open, "them");
+  face($("face"), p.look, "neutral", true); talk(true); speak(open, p.pitch, p.name);
+  setTimeout(() => { if (state.call && state.call.p === p) { face($("face"), p.look, "neutral"); talk(false); } }, 2600);
+  setCompose(true);
+}
+function decline() {
+  stopRing(); $("ring").hidden = true; state.pending = null;
+  state.done++; state.results.push({ name: "Missed call", earned: 0, note: "declined" }); taskUI();
+  setTimeout(incoming, 1500);
+}
+function endCall(reason) {
+  const c = state.call; if (!c || c.over) return;
+  c.over = true; busy = false;
+  addMsg("", reason + " · call ended", "sys");
+  try { speechSynthesis.cancel(); } catch {}
+  talk(false); face($("face"), c.p.look, c.trust < 30 ? "angry" : "neutral");
+  state.done++; state.results.push({ name: c.p.name, earned: c.earned, note: Object.keys(c.verified).length + "/4 verified" });
+  setCompose(false); bankUI(); taskUI();
+  beep([300, 250], .5);
+  setTimeout(() => {
+    if (state.call !== c) return;
+    state.call = null; $("callerName").textContent = "No caller"; emptyFace($("face"));
+    crmUI(); bankUI(); trustUI();
+    if (state.done >= SHIFT) shiftReport(); else setTimeout(incoming, 1200);
+  }, 2600);
+}
+function send() {
+  const v = $("say").value.trim();
+  if (!v || busy || !state.call || state.call.over) return;
+  $("say").value = "";
+  state.call.turns.push({ who: "you", text: v });
+  addMsg("You", v, "you");
+  callerTurn(v);
+}
+function shiftReport() {
+  state.onShift = false; stopRing(); $("ring").hidden = true; taskUI();
+  $("repTotal").textContent = money(state.earned);
+  const max = SHIFT * 4 * PER, pct = state.earned / max;
+  $("repTitle").textContent = pct >= .75 ? "Employee of the month. Somehow." : pct >= .4 ? "Your supervisor nods, barely." : pct > 0 ? "You're on thin ice, Desk 14." : "Not a single cent. Impressive, really.";
+  $("repList").innerHTML = "";
+  state.results.forEach(x => { const li = document.createElement("li"); li.textContent = `${x.name} — ${money(x.earned)} (${x.note})`; $("repList").appendChild(li); });
+  $("report").hidden = false;
+}
+function startShift() {
+  state = { ...state, earned: 0, done: 0, onShift: true, results: [], call: null, pending: null };
+  $("intro").hidden = true; $("report").hidden = true;
+  $("log").innerHTML = ""; addMsg("", "Clocked in. Waiting for the phone to ring…", "sys");
+  taskUI(); crmUI(); bankUI(); trustUI();
+  setTimeout(incoming, 1200);
+}
+
+/* ---------- mic (speech to text via server) ---------- */
+let micOK = !!(navigator.mediaDevices && window.MediaRecorder);
+let rec = null, recChunks = [], recTimer = null;
+async function micToggle() {
+  const b = $("micBtn");
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (!state.call || state.call.over || busy) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { addMsg("", "Mic blocked. Allow microphone access (site must be on https).", "sys"); return; }
+  try { speechSynthesis.cancel(); } catch {}
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => MediaRecorder.isTypeSupported?.(t)) || "";
+  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  recChunks = [];
+  rec.ondataavailable = e => e.data.size && recChunks.push(e.data);
+  rec.onstop = async () => {
+    clearTimeout(recTimer); stream.getTracks().forEach(t => t.stop());
+    b.classList.remove("rec"); b.classList.add("wait"); b.disabled = true;
+    $("say").placeholder = "Transcribing…";
+    const blob = new Blob(recChunks, { type: rec.mimeType || "audio/webm" });
+    try {
+      const r = await fetch("api/stt", { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.text) { $("say").value = d.text; send(); }
+      else addMsg("", d.error || "Couldn't hear you, try again.", "sys");
+    } catch { addMsg("", "Can't reach the server for speech.", "sys"); }
+    b.classList.remove("wait"); $("say").placeholder = "Type what you say…";
+    if (!busy && state.call && !state.call.over) setCompose(true);
+  };
+  rec.start();
+  b.classList.add("rec"); $("say").placeholder = "Listening… tap mic to send";
+  recTimer = setTimeout(() => rec && rec.state === "recording" && rec.stop(), 20000);
+}
+
+/* ---------- wiring ---------- */
+$("startBtn").onclick = startShift;
+$("againBtn").onclick = startShift;
+$("pickBtn").onclick = pickUp;
+$("declineBtn").onclick = decline;
+$("sendBtn").onclick = send;
+$("micBtn").onclick = micToggle;
+$("say").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+$("hangBtn").onclick = () => endCall("You hung up.");
+$("clockBtn").onclick = () => {
+  if (!state.onShift) return startShift();
+  if (state.call && !state.call.over) endCall("You clocked out mid-call.");
+  setTimeout(shiftReport, state.call ? 2700 : 0);
+  state.onShift = false;
+};
+$("ttsBtn").onclick = () => {
+  state.tts = !state.tts;
+  $("ttsBtn").textContent = state.tts ? "VOICE ON" : "VOICE OFF";
+  $("ttsBtn").setAttribute("aria-pressed", state.tts);
+  if (!state.tts) try { speechSynthesis.cancel(); } catch {}
+};
+
+emptyFace($("face")); taskUI(); crmUI(); bankUI(); trustUI();
+addMsg("", "Phone idle. Clock in to start your shift.", "sys");
+
+})();
+</script>
+
+</body>
+</html>

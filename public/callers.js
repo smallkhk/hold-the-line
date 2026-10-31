@@ -1,0 +1,28 @@
+// Shared by browser and server
+var CALLERS = [
+  { name: "Gerald Puddingworth", open: "Hello? Is this the bank? It's Gerald. My card got declined buying birdseed this morning and Biscuit is very upset about it.", age: 71, city: "Duluth, MN", job: "Retired crossword champion", gull: .75,
+    persona: "chatty, sweet, keeps bringing up his cat Biscuit and crossword clues, a bit slow with technology",
+    issue: "His card got declined buying birdseed this morning.", look: { skin: "#f2c9a0", hair: "#d9d9d9", style: "bald", glasses: true }, pitch: .8 },
+  { name: "Marisol Vance", open: "Hi, Marisol Vance. There's a $3.99 charge on my statement I don't recognise, and I'd like an explanation.", age: 44, city: "Tucson, AZ", job: "Tax accountant", gull: .3,
+    persona: "sharp, precise, skeptical, asks the agent to verify themselves, hates vague answers",
+    issue: "There's an unfamiliar $3.99 charge on her statement.", look: { skin: "#c98e5f", hair: "#2a1a12", style: "bun", glasses: true }, pitch: 1.1 },
+  { name: "Darnell Hooper", open: "Yo, bank support? It's Darnell, bro. I'm locked out of the app, tried my password like six times. Between sets right now.", age: 29, city: "Atlanta, GA", job: "Personal trainer", gull: .6,
+    persona: "upbeat gym guy calling mid-workout, out of breath, distracted, says 'bro' a lot, impatient",
+    issue: "He's locked out of the banking app after too many attempts.", look: { skin: "#7a4a2c", hair: "#140d09", style: "fade", glasses: false }, pitch: .9 },
+  { name: "Agnes Whitlock", open: "Hello, dear. This is Mrs Whitlock. I'd like to know whether my pension has landed, please. Speak up, won't you?", age: 88, city: "Brighton, UK", job: "Retired schoolteacher", gull: .8,
+    persona: "polite, hard of hearing, mishears words comically, corrects the agent's grammar",
+    issue: "She wants to know whether her pension landed.", look: { skin: "#f4d3bd", hair: "#eeeeee", style: "curls", glasses: true }, pitch: 1.2 },
+  { name: "Kevin Tran", open: "Hi. Kevin Tran. I got a text saying my account is frozen. I'm about 99% sure it's fake, but I'm checking.", age: 35, city: "San Jose, CA", job: "IT security analyst", gull: .12,
+    persona: "paranoid, knows every scam trick, quizzes the agent, will almost never give secrets; sarcastic",
+    issue: "He got a weird text about his account and wants to confirm it's fake.", look: { skin: "#e3b98f", hair: "#1b1b1b", style: "spiky", glasses: true }, pitch: 1 },
+  { name: "Bea Fontaine", open: "Hey sugar, it's Bea from Bea's Beauty Bar! My supplier charged me twice, and honey, I do not have twice.", age: 52, city: "New Orleans, LA", job: "Hair salon owner", gull: .65,
+    persona: "gossipy, warm, loves compliments and small talk, goes off on tangents about her clients",
+    issue: "She was double-charged by her salon supplier.", look: { skin: "#a8673f", hair: "#5b2a86", style: "big", glasses: false }, pitch: 1.15 },
+  { name: "Lars Pettersen", open: "Lars Pettersen. Tractor payment didn't go through. Need it fixed.", age: 61, city: "Fargo, ND", job: "Soybean farmer", gull: .5,
+    persona: "dry, extremely literal, answers in few words, suspicious of anything 'online'",
+    issue: "His tractor loan payment didn't go through.", look: { skin: "#f0c4a4", hair: "#c9a36a", style: "cap", glasses: false }, pitch: .75 },
+  { name: "Tammy Rourke", open: "Hi, sorry, it's Tammy \u2014 KAYDEN PUT THAT DOWN \u2014 sorry. I got an overdraft fee and I have no idea why.", age: 39, city: "Phoenix, AZ", job: "Mom of four, part-time realtor", gull: .55,
+    persona: "frazzled, kids yelling in the background, keeps getting interrupted, wants this over fast",
+    issue: "She got hit with an overdraft fee she doesn't understand.", look: { skin: "#f1c7a7", hair: "#a0522d", style: "pony", glasses: false }, pitch: 1.1 },
+];
+if (typeof module !== 'undefined') module.exports = { CALLERS };
