@@ -543,7 +543,7 @@ async function callerTurn(line) {
   if (aiOK) {
     try {
       const r = await fetch("api/caller", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caller: CALLERS.indexOf(c.p), creds: c.creds, trust: c.trust, turns: c.turns.slice(-18), line }) });
+        body: JSON.stringify({ caller: CALLERS.indexOf(c.p), creds: c.creds, trust: c.trust, turns: c.turns.slice(0, -1).slice(-18), line }) });
       const d = await r.json().catch(() => ({}));
       if (r.ok) res = d; else addMsg("", (d.error || "AI unavailable") + " — scripted reply used.", "sys");
       if (r.status === 404) aiOK = false;

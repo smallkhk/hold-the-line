@@ -88,6 +88,8 @@ async function handleCaller(req, res) {
   if (!p || !["username", "password", "account", "pin"].every(k => CODE.test(String(c[k] || ""))))
     return send(res, 400, { error: "Bad call data" });
   const turns = Array.isArray(b.turns) ? b.turns.slice(-18) : [];
+  const last = turns[turns.length - 1];
+  if (last && last.who === "you" && String(last.text).trim() === String(b.line).trim()) turns.pop(); // never show the agent's line twice
   const trust = Math.max(0, Math.min(100, +b.trust || 0));
   if (!AI_KEY) return send(res, 503, { error: "AI_KEY not set on server" });
 
